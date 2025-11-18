@@ -10,40 +10,42 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # 1️⃣ Definir a estratégia de matrix apenas para as plataformas
     strategy:
       matrix:
-        python-version: [3.10, 3.11, 3.12]
-        platform: [manylinux2014_x86_64, win_amd64]
-
+        platform: [manylinux_x86_64, win_amd64]
+    
+    # 2️⃣ Usar o runner apropriado para cada plataforma
+    # (linux: ubuntu-latest, windows: windows-latest)
+    runs-on: ${{ matrix.platform == 'win_amd64' && 'windows-latest' || 'ubuntu-latest' }}
+    
     steps:
       # 1️⃣ Checkout do repositório
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      # 2️⃣ Setup do Python correto
-      - name: Setup Python
+      # 2️⃣ Setup do Python 3.11 como host
+      - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          # Apenas o Python 3.11 será instalado no runner para executar o cibuildwheel
+          python-version: '3.11' 
 
       # 3️⃣ Instalar pacotes necessários
       - name: Install build tools
         run: |
           python -m pip install --upgrade pip
-          pip install cython setuptools wheel cibuildwheel
+          pip install setuptools wheel cibuildwheel
 
       # 4️⃣ Build das wheels
       - name: Build wheels
-        run: |
-          if [ "${{ matrix.platform }}" == "win_amd64" ]; then
-            cibuildwheel --output-dir wheelhouse --platform windows
-          else
-            cibuildwheel --output-dir wheelhouse --platform linux
-          fi
+        # O cibuildwheel detecta a plataforma e constrói as wheels para todas as versões Python suportadas.
+        run: cibuildwheel --output-dir wheelhouse
 
       # 5️⃣ Upload das wheels para artifact
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: toon-plus-wheels
+          # Cria um nome único para o artifact de cada plataforma
+          name: toon-plus-wheels-${{ matrix.platform }}
           path: wheelhouse/*.whl
+          retention-days: 7

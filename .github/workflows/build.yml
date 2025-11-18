@@ -15,24 +15,33 @@ jobs:
       matrix:
         python-version: [3.10, 3.11, 3.12]
         platform: [manylinux2014_x86_64, win_amd64]
+
     steps:
+      # 1️⃣ Checkout do repositório
       - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v5
+      # 2️⃣ Setup do Python correto
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: ${{ matrix.python-version }}
 
+      # 3️⃣ Instalar pacotes necessários
       - name: Install build tools
         run: |
           python -m pip install --upgrade pip
           pip install cython setuptools wheel cibuildwheel
 
-      - name: Build wheel
+      # 4️⃣ Build das wheels
+      - name: Build wheels
         run: |
-          cibuildwheel --output-dir wheelhouse --platform ${{
-            matrix.platform == 'win_amd64' && 'windows' || 'linux'
-          }}
+          if [ "${{ matrix.platform }}" == "win_amd64" ]; then
+            cibuildwheel --output-dir wheelhouse --platform windows
+          else
+            cibuildwheel --output-dir wheelhouse --platform linux
+          fi
 
+      # 5️⃣ Upload das wheels para artifact
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
